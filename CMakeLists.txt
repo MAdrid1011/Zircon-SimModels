@@ -121,6 +121,7 @@ if(ZIRCON_BUILD_TESTS AND BUILD_TESTING)
 
         add_zircon_rv32_program(matmul8_int matmul8.c rv32im ilp32)
         add_zircon_rv32_program(matmul8_float matmul8f.c rv32imf ilp32f)
+        add_zircon_rv32_program(isa_rv32imf isa_rv32imf.c rv32imf ilp32f)
 
         add_executable(test_rvcpu_ddr_native_matmul
             tests/RVCPU_DDR_Native_Matmul.cpp
@@ -162,6 +163,24 @@ if(ZIRCON_BUILD_TESTS AND BUILD_TESTING)
 
         add_test(NAME rvcpu_ddr_native_float_matmul
             COMMAND test_rvcpu_ddr_native_float_matmul
+        )
+
+        add_executable(test_rvcpu_ddr_native_isa
+            tests/RVCPU_DDR_Native_ISA.cpp
+        )
+        add_dependencies(test_rvcpu_ddr_native_isa isa_rv32imf_program)
+        target_link_libraries(test_rvcpu_ddr_native_isa
+            PRIVATE
+                Zircon::RVCPU
+                Zircon::DDR
+        )
+        target_compile_definitions(test_rvcpu_ddr_native_isa
+            PRIVATE
+                ZIRCON_ISA_RV32IMF_BIN="${isa_rv32imf_BIN}"
+        )
+
+        add_test(NAME rvcpu_ddr_native_isa
+            COMMAND test_rvcpu_ddr_native_isa
         )
     else()
         message(WARNING "LLVM clang, llvm-objcopy, or llvm-objdump was not found. RVCPU DDR native matmul tests will not be built.")
