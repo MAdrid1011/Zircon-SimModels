@@ -1,8 +1,8 @@
-# Zircon 模拟库
+# Zircon-SimModels 模拟库
 
 ## 总览
 
-Zircon 提供两个同级 C++ 模型。`RVCPU` 是 RISC-V CPU 模型，`DDR` 是内存从设备模型。两者都位于 `zircon` 命名空间，分别通过 `Zircon::RVCPU` 和 `Zircon::DDR` 作为 CMake 目标导出。
+Zircon-SimModels 提供两个同级 C++ 模型。`RVCPU` 是 RISC-V CPU 模型，`DDR` 是内存从设备模型。两者都位于 `zircon` 命名空间，分别通过 `Zircon::RVCPU` 和 `Zircon::DDR` 作为 CMake 目标导出。
 
 `RVCPU` 只维护处理器内部状态，不持有主存。`DDR` 只维护字节寻址的内存数组和端口握手状态，不依赖 CPU。外部仿真环境负责取指、连接两个模型、推进周期和决定仿真结束条件。
 

@@ -1,8 +1,8 @@
-# Zircon 接口说明
+# Zircon-SimModels 接口说明
 
 ## 适用范围
 
-本文档说明如何在外部仿真程序中调用 Zircon 库。库提供两个同级模型。`RVCPU` 执行 RISC-V 指令并生成访存请求。`DDR` 提供字节寻址内存、native valid/ready 端口和 AXI4 从设备端口。
+本文档说明如何在外部仿真程序中调用 Zircon-SimModels 库。库提供两个同级模型。`RVCPU` 执行 RISC-V 指令并生成访存请求。`DDR` 提供字节寻址内存、native valid/ready 端口和 AXI4 从设备端口。
 
 库没有提供 `main` 函数。外部程序需要负责取指、模型连接、周期推进和仿真结束条件。
 
@@ -21,7 +21,7 @@ ctest --preset default
 在另一个 CMake 工程中使用本库时，可以将本仓库作为子目录加入，然后按需链接两个目标：
 
 ```cmake
-add_subdirectory(path/to/Zircon-RVCPU-Simulator)
+add_subdirectory(path/to/Zircon-SimModels)
 target_link_libraries(your_target PRIVATE Zircon::RVCPU Zircon::DDR)
 ```
 
