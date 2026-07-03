@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <unordered_map>
 
 namespace zircon {
 
@@ -47,6 +48,9 @@ public:
     uint32_t getFPRBits(uint32_t index) const;
     void setFPRBits(uint32_t index, uint32_t value);
 
+    uint32_t getCSR(uint32_t addr) const;
+    void setCSR(uint32_t addr, uint32_t value);
+
     bool hasPendingMemory() const;
 
     static uint32_t bits(uint32_t value, uint32_t lo, uint32_t hi);
@@ -76,6 +80,7 @@ private:
     StepResult executeJType(uint32_t inst);
     StepResult executeUType(uint32_t inst);
     StepResult executeFType(uint32_t inst);
+    StepResult executeSystem(uint32_t inst);
 
     StepResult retire(uint32_t nextPc);
     StepResult needMemory(const MemRequest& request, const PendingMemory& pending);
@@ -105,11 +110,15 @@ private:
     void checkRegisterIndex(uint32_t index) const;
     void enforceGPRZero();
 
+    uint32_t readCSR(uint32_t addr) const;
+    void writeCSR(uint32_t addr, uint32_t value);
+
     [[noreturn]] static void throwIllegal(uint32_t inst, const char* reason);
 
     uint32_t pc_ = 0;
     std::array<uint32_t, 32> gpr_{};
     std::array<uint32_t, 32> fpr_{};
+    std::unordered_map<uint32_t, uint32_t> csr_;
     std::optional<PendingMemory> pendingMem_;
 };
 
