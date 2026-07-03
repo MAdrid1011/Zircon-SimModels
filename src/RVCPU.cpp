@@ -27,6 +27,7 @@ constexpr uint32_t OPCODE_FMADD = 0x43;
 constexpr uint32_t OPCODE_FMSUB = 0x47;
 constexpr uint32_t OPCODE_FNMSUB = 0x4b;
 constexpr uint32_t OPCODE_FNMADD = 0x4f;
+constexpr uint32_t OPCODE_SYSTEM = 0x73;
 
 uint32_t asUInt32(int32_t value) {
     return static_cast<uint32_t>(value);
@@ -77,6 +78,7 @@ void RVCPU::reset(uint32_t initialPc) {
     pc_ = initialPc;
     gpr_.fill(0);
     fpr_.fill(0);
+    csr_.clear();
     pendingMem_.reset();
 }
 
@@ -109,6 +111,8 @@ StepResult RVCPU::step(uint32_t inst) {
     case OPCODE_FNMSUB:
     case OPCODE_FNMADD:
         return executeFType(inst);
+    case OPCODE_SYSTEM:
+        return executeSystem(inst);
     default:
         throwIllegal(inst, "unknown opcode");
     }
@@ -165,6 +169,14 @@ uint32_t RVCPU::getFPRBits(uint32_t index) const {
 void RVCPU::setFPRBits(uint32_t index, uint32_t value) {
     checkRegisterIndex(index);
     fpr_[index] = value;
+}
+
+uint32_t RVCPU::getCSR(uint32_t addr) const {
+    return readCSR(addr);
+}
+
+void RVCPU::setCSR(uint32_t addr, uint32_t value) {
+    writeCSR(addr, value);
 }
 
 bool RVCPU::hasPendingMemory() const {
@@ -627,6 +639,48 @@ StepResult RVCPU::executeFType(uint32_t inst) {
     return retire(pc_ + 4);
 }
 
+StepResult RVCPU::executeSystem(uint32_t inst) {
+    const uint32_t f3 = funct3(inst);
+    if (f3 == 0x0) {
+        throwIllegal(inst, "ecall/ebreak/privileged SYSTEM instructions are not supported");
+    }
+
+    const uint32_t csrAddr = bits(inst, 20, 31);
+    const uint32_t rD = rd(inst);
+    const uint32_t rS1 = rs1(inst);
+
+    // For the immediate variants (funct3 bit 2 set) the rs1 field is a 5-bit
+    // zero-extended immediate; otherwise it names a source register.
+    const bool immediate = (f3 & 0x4) != 0;
+    const uint32_t source = immediate ? rS1 : gpr_[rS1];
+
+    const uint32_t oldValue = readCSR(csrAddr);
+    uint32_t newValue = oldValue;
+    bool doWrite = true;
+
+    switch (f3 & 0x3) {
+    case 0x1: // CSRRW / CSRRWI: always writes the CSR.
+        newValue = source;
+        break;
+    case 0x2: // CSRRS / CSRRSI: set bits, but skip the write when rs1/zimm is 0.
+        newValue = oldValue | source;
+        doWrite = rS1 != 0;
+        break;
+    case 0x3: // CSRRC / CSRRCI: clear bits, but skip the write when rs1/zimm is 0.
+        newValue = oldValue & ~source;
+        doWrite = rS1 != 0;
+        break;
+    default:
+        throwIllegal(inst, "invalid CSR funct3");
+    }
+
+    if (doWrite) {
+        writeCSR(csrAddr, newValue);
+    }
+    writeGPR(rD, oldValue);
+    return retire(pc_ + 4);
+}
+
 StepResult RVCPU::retire(uint32_t nextPc) {
     pc_ = nextPc;
     enforceGPRZero();
@@ -804,6 +858,15 @@ void RVCPU::checkRegisterIndex(uint32_t index) const {
 
 void RVCPU::enforceGPRZero() {
     gpr_[0] = 0;
+}
+
+uint32_t RVCPU::readCSR(uint32_t addr) const {
+    const auto it = csr_.find(addr);
+    return it == csr_.end() ? 0u : it->second;
+}
+
+void RVCPU::writeCSR(uint32_t addr, uint32_t value) {
+    csr_[addr] = value;
 }
 
 void RVCPU::throwIllegal(uint32_t inst, const char* reason) {

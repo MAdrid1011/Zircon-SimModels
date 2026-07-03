@@ -40,6 +40,35 @@ endforeach()
 option(ZIRCON_BUILD_TESTS "Build Zircon tests" ON)
 
 if(ZIRCON_BUILD_TESTS AND BUILD_TESTING)
+    # Self-contained CSR test: drives RVCPU directly, no cross-compiler needed.
+    add_executable(test_rvcpu_csr
+        tests/RVCPU_CSR.cpp
+    )
+    target_link_libraries(test_rvcpu_csr
+        PRIVATE
+            Zircon::RVCPU
+    )
+    add_test(NAME rvcpu_csr
+        COMMAND test_rvcpu_csr
+    )
+
+    # Runner for an externally built RVA sim_image.bin. Not gated on the RISC-V
+    # toolchain: it loads a prebuilt binary at runtime. Pass the path as argv[1],
+    # or rely on the default ZIRCON_SIM_IMAGE_BIN location below. Not registered
+    # as a ctest because the binary is provided out-of-band.
+    add_executable(test_rvcpu_sim_image
+        tests/RVCPU_DDR_SimImage.cpp
+    )
+    target_link_libraries(test_rvcpu_sim_image
+        PRIVATE
+            Zircon::RVCPU
+            Zircon::DDR
+    )
+    target_compile_definitions(test_rvcpu_sim_image
+        PRIVATE
+            ZIRCON_SIM_IMAGE_BIN="${CMAKE_CURRENT_BINARY_DIR}/programs/sim_image.bin"
+    )
+
     find_program(ZIRCON_RISCV_CLANG
         NAMES clang
         HINTS /opt/homebrew/opt/llvm/bin
